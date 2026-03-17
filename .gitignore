@@ -1,0 +1,25 @@
+# ignore node modules (installed automatically)
+node_modules/
+**/node_modules/
+
+# ignore environment files (secrets like DB URL, JWT)
+.env
+.env.*
+
+# ignore build output (generated code)
+dist/
+build/
+
+# ignore logs (not useful in repo)
+*.log
+
+# ignore TypeScript cache files
+*.tsbuildinfo
+
+# ignore editor settings (personal files)
+.vscode/
+.idea/
+
+# ignore OS files (system generated)
+.DS_Store
+Thumbs.db
