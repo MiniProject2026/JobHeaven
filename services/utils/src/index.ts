@@ -3,8 +3,11 @@ import dotenv from "dotenv";
 import routes from "./routes";
 import cors from "cors";
 import {v2 as cloudinary} from "cloudinary"; 
+import { startSendMailConsumer } from "./consumer";
 
 dotenv.config();
+
+startSendMailConsumer();
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME ,
