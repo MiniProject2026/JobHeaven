@@ -33,12 +33,9 @@ export const registerUser = tryCatch(async (req, res, next) => {
       VALUES (${name}, ${email}, ${hashedPassword}, ${phoneNumber}, ${role}, ${bio})
       RETURNING user_id, name, email, phone_number, role, created_at
     `;
-
     registeredUser = user;
   } else if (role === "jobseeker") {
     const file = req.file;
-
-    console.log("FILE:", file); // debug
 
     if (!file) {
       throw new ErrorHandler(400, "Resume file is required for job seekers");
@@ -125,7 +122,6 @@ export const loginUser = tryCatch(async (req, res, next) => {
   }
 
   userObject.skills = userObject.skills || [];
-
   delete userObject.password;
 
   const token = jwt.sign({ id: userObject.user_id }, process.env.JWT_SEC!, {
@@ -141,12 +137,14 @@ export const loginUser = tryCatch(async (req, res, next) => {
 
 export const forgotPassword = tryCatch(async (req, res, next) => {
   const { email } = req.body;
+
   if (!email) {
     throw new ErrorHandler(400, "Email is required");
   }
 
   const users =
-    await sql`SELECT user_id, name FROM users WHERE email = ${email}`;
+    await sql`SELECT user_id, name, email FROM users WHERE email = ${email}`;
+
   if (users.length === 0) {
     return res.json({
       message: "If a user with that email exists, a reset link has been sent",
@@ -156,33 +154,76 @@ export const forgotPassword = tryCatch(async (req, res, next) => {
   const user = users[0];
 
   const resetToken = jwt.sign(
-    { 
-    email: user.email,
-    type: "reset",
-   },
-   process.env.JWT_SEC as string,
-   {expiresIn: "15m"} 
+    {
+      email: user.email,
+      type: "reset",
+    },
+    process.env.JWT_SEC as string,
+    { expiresIn: "15m" }
   );
 
-   const resetLink = `${process.env.FRONTEND_URL}/reset/${resetToken}`;
+  const resetLink = `${process.env.FRONTEND_URL}/reset/${resetToken}`;
 
-   await redisClient.set(`forgot:${email}`, resetToken, 
-    {
-      EX: 900,
-    })
-
-   const message = {
-    to: email,
-    subject: "Password Reset Request",
-    html:forgotPasswordTemplate(resetLink),
-   };
-
-   publishToTopic("send-mail", message).catch((error) => {
-    console.error("Failed to publish password reset email to Kafka:", error);
+  await redisClient.set(`forgot:${user.email}`, resetToken, {
+    EX: 900,
   });
+
+  const message = {
+    to: user.email,
+    subject: "Password Reset Request",
+    html: forgotPasswordTemplate(resetLink),
+  };
+
+  publishToTopic("send-mail", message).catch(() => {});
 
   res.json({
     message: "If a user with that email exists, a reset link has been sent",
   });
+});
 
+export const resetPassword = tryCatch(async (req, res, next) => {
+  const token = req.params.token as string;
+  const { password } = req.body;
+
+  let decode: any;
+
+  try {
+    decode = jwt.verify(token, process.env.JWT_SEC as string);
+  } catch {
+    throw new ErrorHandler(400, "Invalid or expired reset token");
+  }
+
+  if (decode.type !== "reset") {
+    throw new ErrorHandler(400, "Invalid reset token");
+  }
+
+  const email = decode.email;
+
+  const storedToken = await redisClient.get(`forgot:${email}`);
+
+  if (!storedToken || storedToken !== token) {
+    throw new ErrorHandler(400, "Invalid or expired reset token");
+  }
+
+  const users =
+    await sql`SELECT user_id FROM users WHERE email = ${email}`;
+
+  if (users.length === 0) {
+    throw new ErrorHandler(400, "User not found");
+  }
+
+  const user = users[0];
+
+  const hashedPassword = await bcrypt.hash(password, 10);
+
+  await sql`
+    UPDATE users SET password = ${hashedPassword}
+    WHERE user_id = ${user.user_id}
+  `;
+
+  await redisClient.del(`forgot:${email}`);
+
+  res.json({
+    message: "Password reset successful",
+  });
 });
