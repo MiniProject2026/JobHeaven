@@ -6,7 +6,6 @@ import { tryCatch } from "../utils/TryCatch.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
-// ================= REGISTER =================
 export const registerUser = tryCatch(async (req, res, next) => {
   const { name, email, password, phoneNumber, role, bio } = req.body;
 
@@ -14,7 +13,6 @@ export const registerUser = tryCatch(async (req, res, next) => {
     throw new ErrorHandler(400, "All fields are required");
   }
 
-  // check existing user
   const existingUser =
     await sql`SELECT user_id FROM users WHERE email = ${email}`;
 
@@ -26,7 +24,6 @@ export const registerUser = tryCatch(async (req, res, next) => {
 
   let registeredUser;
 
-  // ================= RECRUITER =================
   if (role === "recruiter") {
     const [user] = await sql`
       INSERT INTO users (name, email, password, phone_number, role, bio)
@@ -37,7 +34,6 @@ export const registerUser = tryCatch(async (req, res, next) => {
     registeredUser = user;
   }
 
-  // ================= JOB SEEKER =================
   else if (role === "jobseeker") {
     const file = req.file;
 
@@ -54,7 +50,6 @@ export const registerUser = tryCatch(async (req, res, next) => {
       throw new ErrorHandler(500, "Failed to generate buffer");
     }
 
-    // upload to external service (Cloudinary / etc.)
     const { data } = await axios.post(
       `${process.env.UPLOAD_SERVICES}/api/utils/upload`,
       { buffer: filebuffer.content }
@@ -69,7 +64,6 @@ export const registerUser = tryCatch(async (req, res, next) => {
     registeredUser = user;
   }
 
-  // ================= TOKEN =================
   const token = jwt.sign(
     { id: registeredUser?.user_id },
     process.env.JWT_SEC!,
@@ -83,8 +77,6 @@ export const registerUser = tryCatch(async (req, res, next) => {
   });
 });
 
-
-// ================= LOGIN =================
 export const loginUser = tryCatch(async (req, res, next) => {
   const { email, password } = req.body;
 
@@ -134,7 +126,6 @@ export const loginUser = tryCatch(async (req, res, next) => {
 
   userObject.skills = userObject.skills || [];
 
-  // remove password before sending
   delete userObject.password;
 
   const token = jwt.sign(
