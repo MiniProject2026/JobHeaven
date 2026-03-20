@@ -5,6 +5,9 @@ import ErrorHandler from "../utils/errorHandler.js";
 import { tryCatch } from "../utils/TryCatch.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
+import { forgotPasswordTemplate } from "../templete.js";
+import { publishToTopic } from "../producer.js";
+import { redisClient } from "../index.js";
 
 export const registerUser = tryCatch(async (req, res, next) => {
   const { name, email, password, phoneNumber, role, bio } = req.body;
@@ -32,9 +35,7 @@ export const registerUser = tryCatch(async (req, res, next) => {
     `;
 
     registeredUser = user;
-  }
-
-  else if (role === "jobseeker") {
+  } else if (role === "jobseeker") {
     const file = req.file;
 
     console.log("FILE:", file); // debug
@@ -45,14 +46,13 @@ export const registerUser = tryCatch(async (req, res, next) => {
 
     const filebuffer = getbuffer(file);
 
- 
     if (!filebuffer || !filebuffer.content) {
       throw new ErrorHandler(500, "Failed to generate buffer");
     }
 
     const { data } = await axios.post(
       `${process.env.UPLOAD_SERVICES}/api/utils/upload`,
-      { buffer: filebuffer.content }
+      { buffer: filebuffer.content },
     );
 
     const [user] = await sql`
@@ -67,7 +67,7 @@ export const registerUser = tryCatch(async (req, res, next) => {
   const token = jwt.sign(
     { id: registeredUser?.user_id },
     process.env.JWT_SEC!,
-    { expiresIn: "15d" }
+    { expiresIn: "15d" },
   );
 
   res.json({
@@ -128,15 +128,61 @@ export const loginUser = tryCatch(async (req, res, next) => {
 
   delete userObject.password;
 
-  const token = jwt.sign(
-    { id: userObject.user_id },
-    process.env.JWT_SEC!,
-    { expiresIn: "15d" }
-  );
+  const token = jwt.sign({ id: userObject.user_id }, process.env.JWT_SEC!, {
+    expiresIn: "15d",
+  });
 
   res.json({
     message: "User logged in successfully",
     user: userObject,
     token,
   });
+});
+
+export const forgotPassword = tryCatch(async (req, res, next) => {
+  const { email } = req.body;
+  if (!email) {
+    throw new ErrorHandler(400, "Email is required");
+  }
+
+  const users =
+    await sql`SELECT user_id, name FROM users WHERE email = ${email}`;
+  if (users.length === 0) {
+    return res.json({
+      message: "If a user with that email exists, a reset link has been sent",
+    });
+  }
+
+  const user = users[0];
+
+  const resetToken = jwt.sign(
+    { 
+    email: user.email,
+    type: "reset",
+   },
+   process.env.JWT_SEC as string,
+   {expiresIn: "15m"} 
+  );
+
+   const resetLink = `${process.env.FRONTEND_URL}/reset/${resetToken}`;
+
+   await redisClient.set(`forgot:${email}`, resetToken, 
+    {
+      EX: 900,
+    })
+
+   const message = {
+    to: email,
+    subject: "Password Reset Request",
+    html:forgotPasswordTemplate(resetLink),
+   };
+
+   publishToTopic("send-mail", message).catch((error) => {
+    console.error("Failed to publish password reset email to Kafka:", error);
+  });
+
+  res.json({
+    message: "If a user with that email exists, a reset link has been sent",
+  });
+
 });

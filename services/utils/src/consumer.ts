@@ -24,12 +24,12 @@ export const startSendMailConsumer = async () => {
                 const{to , subject, html} = JSON.parse(message.value?.toString() || '{}');
 
                 const transporter = nodemailer.createTransport({
-                    host: "smtp.gamil.com",
+                    host: "smtp.gmail.com",
                     port: 465,
                     secure: true,
                     auth: {
-                        user: "xyz@gmail.com",
-                        pass: "password",
+                        user: "jangiddee999@gmail.com",
+                        pass: "wfttqjdvxdptdilc",
                     },
 
                 });
