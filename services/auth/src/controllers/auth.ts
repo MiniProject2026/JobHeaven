@@ -1,3 +1,5 @@
+import axios from "axios";
+import getbuffer from "../utils/buffer.js";
 import { sql } from "../utils/db.js";
 
 import ErrorHandler from "../utils/errorHandler.js";
@@ -26,8 +28,24 @@ export const registerUser = tryCatch(async (req, res, next) => {
     resgisteredUser = user;
   } else if (role === "jobseeker") {
     const file = req.file;
+
+if(!file){
+    throw new ErrorHandler(400, "Profile picture is required");
+}
+
+const filebuffer= getbuffer(file);
+
+
+if(!filebuffer || filebuffer.content){
+    throw new ErrorHandler(500,"failed to generate buffer ");
+}
+
+    const {data}= await axios.post(`${process.env.UTILS_URL}/api/utils/upload`,
+      {buffer: filebuffer.content}
+    );
+
     const [user] =
-      await sql`INSERT INTO users (name, email, password, phone_number, role) VALUES (${name}, ${email}, ${hashedPassword}, ${phoneNumber}, ${role}) RETURNING user_id, name, email, phone_number, role, crated_at`;
+      await sql`INSERT INTO users (name, email, password, phone_number, role,bio,resume,    resume_public_id) VALUES (${name}, ${email}, ${hashedPassword}, ${phoneNumber}, ${role}, ${bio}, ${data.url}, ${data.public_id}) RETURNING user_id, name, email, phone_number, role,bio,resume, created_at`;
   }
   res.json(name);
 });
