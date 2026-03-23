@@ -2,6 +2,8 @@ import { tryCatch } from "../utils/TryCatch.js";
 import { AuthenticatedRequest } from "../middleware/auth.js";
 import { sql } from "../utils/db.js";
 import ErrorHandler from "../utils/errorHandler.js";
+import getbuffer from "../utils/buffer.js";
+import axios from "axios";
 
 export const myProfile = tryCatch(
   async (req: AuthenticatedRequest, res, next) => {
@@ -25,7 +27,7 @@ export const getUserProfile = tryCatch(async (req, res, next) => {
 
 const users = await sql`
       SELECT u.user_id, u.name, u.email, u.phone_number, u.role, u.bio,
-      u.resume, u.resume_public_id, u.profile_pic_public_id,
+      u.resume, u.resume_public_id, u.profile_pic,u.profile_pic_public_id,
       u.subscription,
       ARRAY_AGG(s.name) FILTER (WHERE s.name IS NOT NULL) AS skills
       FROM users u
@@ -49,5 +51,85 @@ const users = await sql`
   }
 );
 
+export const updateUserProfile = tryCatch(async (req: AuthenticatedRequest, res) => {
+  const user = req.user;
+
+  if (!user) {
+    throw new ErrorHandler(401, "User not found");
+  }
+
+   const { name, phoneNumber,bio} = req.body;
+
+   const newName= name || user.name;
+   const newPhoneNumber = phoneNumber || user.phone_number;
+   const  newBio =bio || user.bio;
+   const [updatedUser] =await sql`
+   
+   update users SET name =${newName},phone_number=${newPhoneNumber}, bio =${newBio}
+   WHERE user_id =${user.user_id}
+   RETURNING user_id,name,email,phone_number,bio
+
+   `;
+
+   res.json({
+    message: "profile update successfully",
+    updatedUser,
+   });
+}
+);
+
+interface UploadResponse {
+  url: string;
+  public_id: string;
+}
+
+export const updateProfilepic = tryCatch(
+  async (req: AuthenticatedRequest, res) => {
+    const user = req.user;
+
+    if (!user) {
+      throw new ErrorHandler(401, "User not found");
+    }
+
+    const file = req.file;
+    if (!file) {
+      throw new ErrorHandler(400, "No file uploaded");
+    }
+
+    const oldPublicId = user.profile_pic_public_id;
+    const fileBuffer = getbuffer(file);
+
+    if (!fileBuffer || !fileBuffer.content) {
+      throw new ErrorHandler(400, "Failed to process uploaded file");
+    }
+
+ const uploadService = process.env.UPLOAD_SERVICE?.trim();
+
+if (!uploadService) {
+  throw new ErrorHandler(500, "UPLOAD_SERVICE not defined");
+}
+
+const { data: uploadResult } = await axios.post<UploadResponse>(
+  `${uploadService}/api/utils/upload`,
+      {
+        buffer: fileBuffer.content,
+        public_id: oldPublicId || null,
+      }
+    );
+
+    const [updatedUser] = await sql`
+      UPDATE users 
+      SET profile_pic = ${uploadResult.url}, 
+          profile_pic_public_id = ${uploadResult.public_id}
+      WHERE user_id = ${user.user_id} 
+      RETURNING user_id, name, profile_pic;
+    `;
+
+    res.json({
+      message: "Profile picture updated",
+      updatedUser,
+    });
+  }
+);
 
 
