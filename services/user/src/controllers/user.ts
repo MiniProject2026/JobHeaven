@@ -19,13 +19,13 @@ export const myProfile = tryCatch(
       success: true,
       user,
     });
-  }
+  },
 );
 
 export const getUserProfile = tryCatch(async (req, res, next) => {
-    const {userId} = req.params;
+  const { userId } = req.params;
 
-const users = await sql`
+  const users = await sql`
       SELECT u.user_id, u.name, u.email, u.phone_number, u.role, u.bio,
       u.resume, u.resume_public_id, u.profile_pic,u.profile_pic_public_id,
       u.subscription,
@@ -37,33 +37,31 @@ const users = await sql`
       GROUP BY u.user_id;
     `;
 
-    if (users.length === 0) {
-      throw new ErrorHandler(404, "User not found");
+  if (users.length === 0) {
+    throw new ErrorHandler(404, "User not found");
+  }
+
+  const user = users[0];
+
+  user.skills = user.skills || [];
+
+  res.json(user);
+});
+
+export const updateUserProfile = tryCatch(
+  async (req: AuthenticatedRequest, res) => {
+    const user = req.user;
+
+    if (!user) {
+      throw new ErrorHandler(401, "User not found");
     }
 
-    const user = users[0];
+    const { name, phoneNumber, bio } = req.body;
 
-    user.skills = user.skills || [];
-
-    res.json(user);
-
-
-  }
-);
-
-export const updateUserProfile = tryCatch(async (req: AuthenticatedRequest, res) => {
-  const user = req.user;
-
-  if (!user) {
-    throw new ErrorHandler(401, "User not found");
-  }
-
-   const { name, phoneNumber,bio} = req.body;
-
-   const newName= name || user.name;
-   const newPhoneNumber = phoneNumber || user.phone_number;
-   const  newBio =bio || user.bio;
-   const [updatedUser] =await sql`
+    const newName = name || user.name;
+    const newPhoneNumber = phoneNumber || user.phone_number;
+    const newBio = bio || user.bio;
+    const [updatedUser] = await sql`
    
    update users SET name =${newName},phone_number=${newPhoneNumber}, bio =${newBio}
    WHERE user_id =${user.user_id}
@@ -71,11 +69,11 @@ export const updateUserProfile = tryCatch(async (req: AuthenticatedRequest, res)
 
    `;
 
-   res.json({
-    message: "profile update successfully",
-    updatedUser,
-   });
-}
+    res.json({
+      message: "profile update successfully",
+      updatedUser,
+    });
+  },
 );
 
 interface UploadResponse {
@@ -103,18 +101,18 @@ export const updateProfilepic = tryCatch(
       throw new ErrorHandler(400, "Failed to process uploaded file");
     }
 
- const uploadService = process.env.UPLOAD_SERVICE?.trim();
+    const uploadService = process.env.UPLOAD_SERVICE?.trim();
 
-if (!uploadService) {
-  throw new ErrorHandler(500, "UPLOAD_SERVICE not defined");
-}
+    if (!uploadService) {
+      throw new ErrorHandler(500, "UPLOAD_SERVICE not defined");
+    }
 
-const { data: uploadResult } = await axios.post<UploadResponse>(
-  `${uploadService}/api/utils/upload`,
+    const { data: uploadResult } = await axios.post<UploadResponse>(
+      `${uploadService}/api/utils/upload`,
       {
         buffer: fileBuffer.content,
         public_id: oldPublicId || null,
-      }
+      },
     );
 
     const [updatedUser] = await sql`
@@ -129,7 +127,107 @@ const { data: uploadResult } = await axios.post<UploadResponse>(
       message: "Profile picture updated",
       updatedUser,
     });
-  }
+  },
 );
 
+export const updateresume = tryCatch(async (req: AuthenticatedRequest, res) => {
+  const user = req.user;
 
+  if (!user) {
+    throw new ErrorHandler(401, "User not found");
+  }
+
+  const file = req.file;
+  if (!file) {
+    throw new ErrorHandler(400, "No Pdf uploaded");
+  }
+
+  const oldPublicId = user.resume_public_id;
+  const fileBuffer = getbuffer(file);
+
+  if (!fileBuffer || !fileBuffer.content) {
+    throw new ErrorHandler(400, "Failed to process uploaded file");
+  }
+
+  const uploadService = process.env.UPLOAD_SERVICE?.trim();
+
+  if (!uploadService) {
+    throw new ErrorHandler(500, "UPLOAD_SERVICE not defined");
+  }
+
+  const { data: uploadResult } = await axios.post<UploadResponse>(
+    `${uploadService}/api/utils/upload`,
+    {
+      buffer: fileBuffer.content,
+      public_id: oldPublicId || null,
+    },
+  );
+
+  const [updatedUser] = await sql`
+      UPDATE users 
+      SET resume= ${uploadResult.url}, 
+          resume_public_id = ${uploadResult.public_id}
+      WHERE user_id = ${user.user_id} 
+      RETURNING user_id, name, resume;
+    `;
+
+  res.json({
+    message: "Resume updated",
+    updatedUser,
+  });
+});
+
+export const addSkillToUser = tryCatch(
+  async (req: AuthenticatedRequest, res) => {
+    const userId = req.user?.user_id;
+    const { skillName } = req.body;
+    if (!skillName || skillName.trim() === "")
+      throw new ErrorHandler(400, "Please provide a skill name");
+    let wasSkillAdded = false;
+    try {
+      await sql`BEGIN`;
+      const users =
+        await sql`SELECT user_id FROM users WHERE user_id=${userId}`;
+      if (users.length === 0) throw new ErrorHandler(404, "User not found.");
+      const [skill] =
+        await sql`INSERT INTO skills (name) VALUES (${skillName.trim()}) ON CONFLICT (name) DO UPDATE SET name = EXCLUDED.name RETURNING skill_id`;
+      const skillId = skill.skill_id;
+      const insertionResult =
+        await sql`INSERT INTO user_skills (user_id,skill_id) VALUES (${userId},${skillId}) ON CONFLICT (user_id,skill_id) DO NOTHING RETURNING user_id `;
+      if (insertionResult.length > 0) {
+        wasSkillAdded = true;
+      }
+      await sql`COMMIT`;
+    } catch (error) {
+      //console.log("🚨 SQL CRASH REASON:", error);
+      await sql`ROLLBACK`;
+      throw error;
+    }
+    if (!wasSkillAdded) {
+      return res.status(200).json({
+        message: "User already possesses this skill",
+      });
+    }
+    res.json({
+      message: `Skill ${skillName.trim()} is added successfully`,
+    });
+  },
+);
+export const deleteSkillFromUser = tryCatch(
+  async (req: AuthenticatedRequest, res) => {
+    const user = req.user;
+    if (!user) throw new ErrorHandler(401, "Authentication Required");
+    const { skillName } = req.body;
+    if (!skillName || skillName.trim() === "") {
+      throw new ErrorHandler(400, "Please provide a skill name");
+    }
+    const result =
+      await sql`DELETE FROM user_skills WHERE user_id=${user.user_id} AND skill_id=(SELECT skill_id FROM skills WHERE name=${skillName.trim()}) RETURNING user_id`;
+    if (result.length === 0) {
+      throw new ErrorHandler(404, `Skill ${skillName.trim()} was not found`);
+    }
+    res.json({
+      message: `Skill ${skillName.trim()} was deleted successfully`,
+    });
+  },
+);

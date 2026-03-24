@@ -2,9 +2,6 @@ import { NextFunction, Request, Response } from "express";
 import jwt, { JwtPayload } from "jsonwebtoken";
 import { sql } from "../utils/db";
 
-
-
-
 interface user {
   user_id: string;
   name: string;
@@ -14,21 +11,20 @@ interface user {
   bio: string | null;
   resume: string | null;
   resume_public_id: string | null;
-//   profile_pic: string | null;
+  //   profile_pic: string | null;
   profile_pic_public_id: string | null;
   skills: string[];
   subscription: string | null;
 }
 
-
 export interface AuthenticatedRequest extends Request {
-    user?: user;
+  user?: user;
 }
 
 export const isAuth = async (
   req: AuthenticatedRequest,
   res: Response,
-  next: NextFunction
+  next: NextFunction,
 ): Promise<void> => {
   try {
     const authHeader = req.headers.authorization;
@@ -44,7 +40,7 @@ export const isAuth = async (
 
     const decodedPayload = jwt.verify(
       token,
-      process.env.JWT_SEC as string
+      process.env.JWT_SEC as string,
     ) as JwtPayload & { id: string };
 
     if (!decodedPayload || !decodedPayload.id) {
