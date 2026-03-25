@@ -68,7 +68,7 @@ async function initDB() {
   }
 }
 initDB().then(() => {
-  app.listen(() => {
+  app.listen(process.env.PORT, () => {
     console.log(
       `Job service is running on http://localhost:${process.env.PORT}`,
     );
