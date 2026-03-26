@@ -70,7 +70,7 @@ export const createJob = tryCatch(async (req: AuthenticatedRequest, res) => {
   if (user.role !== "recruiter") {
     throw new ErrorHandler(
       403,
-      "Forbidden, Only recruiter can create a comapany",
+      "Forbidden, Only recruiter can create a company",
     );
   }
 
@@ -99,5 +99,52 @@ export const createJob = tryCatch(async (req: AuthenticatedRequest, res) => {
   res.json({
     message: "Job posted successfully",
     job: newJob,
+  });
+});
+
+export const updateJob = tryCatch(async (req: AuthenticatedRequest, res) => {
+  const user = req.user;
+  if (!user) {
+    throw new ErrorHandler(401, "Authentication required");
+  }
+  if (user.role !== "recruiter") {
+    throw new ErrorHandler(
+      403,
+      "Forbidden, Only recruiter can create a comapany",
+    );
+  }
+
+  const {
+    title,
+    description,
+    salary,
+    location,
+    role,
+    job_type,
+    work_location,
+    company_id,
+    openings,
+    is_active,
+  } = req.body;
+  const [existingJob] =
+    await sql`SELECT posted_by_recruiter_id FROM jobs WHERE job_id=${req.params.jobId}`;
+  if (!existingJob) {
+    throw new ErrorHandler(404, "Job not found");
+  }
+  if (existingJob.posted_by_recruiter_id !== user.user_id)
+    throw new ErrorHandler(403, "Forbidden, You are not allowed");
+  const [updatedJob] = await sql`UPDATE jobs SET title=${title},
+  description=${description},
+  salary=${salary},
+  location=${location},
+  role=${role},
+  job_type=${job_type},
+  work_location=${work_location},
+  openings=${openings},
+  is_active=${is_active}
+  WHERE job_id=${req.params.jobId} RETURNING *`;
+  res.json({
+    message: "Job updated successfully",
+    job: updatedJob,
   });
 });
