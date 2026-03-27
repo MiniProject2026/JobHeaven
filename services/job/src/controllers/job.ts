@@ -148,3 +148,51 @@ export const updateJob = tryCatch(async (req: AuthenticatedRequest, res) => {
     job: updatedJob,
   });
 });
+
+export const getAllCompany = tryCatch(
+  async (req: AuthenticatedRequest, res) => {
+    const companies =
+      await sql`SELECT * FROM companies WHERE recruiter_id=${req.user?.user_id}`;
+    res.json(companies);
+  },
+);
+export const getCompanyDetails = tryCatch(
+  async (req: AuthenticatedRequest, res) => {
+    const { id } = req.params;
+    if (!id) throw new ErrorHandler(400, "Company id is required");
+    const [companyData] = await sql`SELECT c.*, COALESCE(
+(
+SELECT json_agg(j.*) FROM jobs j WHERE j.company_id=c.company_id
+),
+'[]'::json
+)AS jobs
+FROM companies c WHERE c.company_id=${id} GROUP BY c.company_id;`;
+
+    if (!companyData) throw new ErrorHandler(404, "Company not found");
+    res.json(companyData);
+  },
+);
+
+export const getAllActiveJobs = tryCatch(async (req, res) => {
+  const { title, location } = req.query as {
+    title?: string;
+    location?: string;
+  };
+  let queryString = `SELECT j.job_id,j.title,j.description,j.salary,j.location,j.job_type,j.role,j.work_location,j.created_at,c.name AS company_name,c.logo AS company_logo,c.company_id AS company_id FROM jobs j JOIN companies c ON j.company_id=c.company_id WHERE j.is_active=true`;
+
+  const values = [];
+  let paramIndex = 1;
+  if (title) {
+    queryString += ` AND j.title ILIKE $${paramIndex} `;
+    values.push(`%${location}%`);
+    paramIndex++;
+  }
+  queryString += " ORDER BY j.created_at DESC";
+  const jobs = (await sql.query(queryString, values)) as any[];
+  res.json(jobs);
+});
+
+export const getSingleJob = tryCatch(async (req, res) => {
+  const [job] = await sql` SELECT * FROM jobs WHERE job_id=${req.params.jobId}`;
+  res.json(job);
+});

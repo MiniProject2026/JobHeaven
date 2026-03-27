@@ -231,3 +231,30 @@ export const deleteSkillFromUser = tryCatch(
     });
   },
 );
+
+export const applyForJob = tryCatch(async (req: AuthenticatedRequest, res) => {
+  const user = req.user;
+  if (!user) throw new ErrorHandler(401, "Authentication required");
+  if (user.role !== "jobseeker")
+    throw new ErrorHandler(
+      403,
+      "Forbidden, you are not allowed for this application",
+    );
+  const applicant_id = user.user_id;
+  const resume = user.resume;
+  if (!resume)
+    throw new ErrorHandler(
+      400,
+      "You need to add resum in your profile to apply for this job",
+    );
+  const { job_id } = req.body;
+  if (!job_id) throw new ErrorHandler(400, "job id is required");
+  const [job] = await sql`SELECT is_active FROM jobs WHERE job_id=${job_id}`;
+  if (!job) throw new ErrorHandler(404, "No jobs found");
+  if (!job.is_active) throw new ErrorHandler(400, "JOb is not active");
+  const now = Date.now();
+  const subTime = req.user?.subscription
+    ? new Date(req.user.subscription).getTime()
+    : 0;
+  const isSubscribed = subTime > now;
+});
