@@ -257,4 +257,25 @@ export const applyForJob = tryCatch(async (req: AuthenticatedRequest, res) => {
     ? new Date(req.user.subscription).getTime()
     : 0;
   const isSubscribed = subTime > now;
+  let newApplication;
+  try {
+    [newApplication] =
+      await sql` INSERT INTO applications (job_id,applicant_id,applicant_email,resume,subscribed) VALUES (${job_id}, ${applicant_id}, ${user?.email},${resume},${isSubscribed})`;
+  } catch (error: any) {
+    if (error.code === "23505")
+      throw new ErrorHandler(409, "You have already applied to this job");
+    throw error;
+  }
+  res.json({
+    message: "Applied to job successfully",
+    application: newApplication,
+  });
 });
+
+export const getAllApplications = tryCatch(
+  async (req: AuthenticatedRequest, res) => {
+    const Applications =
+      await sql` SELECT a.*,j.title AS job_title,j.salary AS job_salary,j.location AS job_location FROM applications a JOIN jobs j ON a.job_id=j.job_id WHERE a.applicant_id =${req.user?.user_id}`;
+    res.json(Applications);
+  },
+);
