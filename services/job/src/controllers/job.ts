@@ -238,18 +238,19 @@ export const updateApplication = tryCatch(
       await sql`SELECT * FROM applications WHERE application_id=${id}`;
     if (!application) throw new ErrorHandler(404, "Application not found");
     const [job] =
-      await sql`SELECT posted_by_recruiter_id,title,FROM jobs WHERE job_id=${application.job_id}`;
+      await sql`SELECT posted_by_recruiter_id,title FROM jobs WHERE job_id=${application.job_id}`;
     if (!job) throw new ErrorHandler(404, "no job with this id");
     if (job.posted_by_recruiter_id !== user.user_id)
       throw new ErrorHandler(403, "Forbidden you are not allowed");
     const [updateApplication] =
-      await sql` UPDATE SET status =${req.body.status} WHERE application_id=${id} RETURNING *`;
+      await sql` UPDATE applications SET status =${req.body.status} WHERE application_id=${id} RETURNING *`;
     const message = {
       to: application.applicant_email,
       subject: "Application update -Job portal",
       html: applicationStatusUpdateTemplate(job.title),
     };
-    publishToTopic("send_mail", message).catch((error) => {
+
+    publishToTopic("send-mail", message).catch((error) => {
       console.error("Failed to publish message to kafka", error);
     });
     res.json({
