@@ -3,7 +3,19 @@ import Link from "next/link";
 import React, { useState } from "react";
 import { Button } from "./ui/button";
 //import Home from "@/app/page";
-import { Briefcase, Home, Home as HomeIcon, Info } from "lucide-react"; // Import the actual icon
+import {
+  Briefcase,
+  Home,
+  Home as HomeIcon,
+  Info,
+  LogOut,
+  Menu,
+  User,
+  X,
+} from "lucide-react"; // Import the actual icon
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { ModeToggle } from "./mode-toggle";
 
 const NavBar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -58,6 +70,133 @@ const NavBar = () => {
               </Button>
             </Link>
           </div>
+          <div className="hidden md:flex items-center gap-3">
+            {isAuth ? (
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button className="flex items-center gap-2 hover:opacity-80 transition-opacity">
+                    <Avatar className="h-9 w-9 ring-2 ring-offset-2 ring-offset-background ring-blue-500/20 cursor-pointer hover:ring-blue-500/40 transition-all">
+                      {/*<AvatarImage src={} alt=""/>*/}
+                      <AvatarFallback className="bg-blue-100 dark:bg-blue-900 text-blue-600">
+                        A
+                      </AvatarFallback>
+                    </Avatar>
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-56 p-2" align="end">
+                  <div className="px-3 py-2 mb-2 border-b">
+                    <p className="text-sm font-semibold">Akash</p>
+                    <p className="text-xs opacity-60 truncate">
+                      bestakashchand@gmail.com
+                    </p>
+                  </div>
+                  <Link href={"/account"}>
+                    <Button
+                      className="w-full justify-start gap-2"
+                      variant={"ghost"}
+                    >
+                      <User size={16} />
+                      My Profile
+                    </Button>
+                  </Link>
+                  <Button
+                    className="w-full justify-start gap-2 mt-1"
+                    variant={"ghost"}
+                    onClick={logoutHandler}
+                  >
+                    <LogOut size={16} />
+                    Logout
+                  </Button>
+                </PopoverContent>
+              </Popover>
+            ) : (
+              <Link href={"/login"}>
+                <Button className="gap-2">
+                  <User size={16} />
+                  Sign In
+                </Button>
+              </Link>
+            )}
+            <ModeToggle />
+          </div>
+          <div className="md:hidden flex items-center gap-3">
+            <ModeToggle />
+            <button
+              onClick={toggleMenu}
+              className="p-2 rounded-lg hover:bg-accent transition-colors"
+              aria-label="Toggle menu"
+            >
+              {isOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
+          </div>
+        </div>
+      </div>
+      <div
+        className={`md:hidden border-t overflow-hidden transition-all duration-300 ease-in-out ${
+          isOpen ? "max-96 opacity-100" : "max-h-0 opacity-0"
+        }`}
+      >
+        <div className="px-3 py-3 space-y-1 bg-background/95 backdrop-blur-md">
+          <Link href={"/"} onClick={toggleMenu}>
+            <Button
+              variant={"ghost"}
+              className="w-full justify-start gap-3 h-11 "
+            >
+              <Home size={18} />
+              Home
+            </Button>
+          </Link>
+
+          <Link href={"/jobs"} onClick={toggleMenu}>
+            <Button
+              variant={"ghost"}
+              className="w-full justify-start gap-3 h-11 "
+            >
+              <Briefcase size={18} />
+              Jobs
+            </Button>
+          </Link>
+
+          <Link href={"/about"} onClick={toggleMenu}>
+            <Button
+              variant={"ghost"}
+              className="w-full justify-start gap-3 h-11 "
+            >
+              <Info size={18} />
+              About
+            </Button>
+          </Link>
+          {isAuth ? (
+            <>
+              <Link href={"/about"} onClick={toggleMenu}>
+                <Button
+                  variant={"ghost"}
+                  className="w-full justify-start gap-3 h-11 "
+                >
+                  <User size={18} />
+                  My Profile
+                </Button>
+              </Link>
+              <Button
+                variant={"destructive"}
+                className="w-full justify-start gap-3 h-11"
+                onClick={() => {
+                  logoutHandler();
+                  toggleMenu();
+                }}
+              >
+                <LogOut size={18} />
+                Logout
+              </Button>
+            </>
+          ) : (
+            <Link href={"/login"} onClick={toggleMenu}>
+              <Button className="w-full justify-start gap-3 h-11 mt-2 ">
+                <User size={18} />
+                Sign In
+              </Button>
+            </Link>
+          )}
         </div>
       </div>
     </nav>
