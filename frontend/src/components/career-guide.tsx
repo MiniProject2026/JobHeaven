@@ -1,6 +1,16 @@
 "use client";
 import { CareerGuideResponse, utils_service } from "@/type";
-import { ArrowRight, Loader, Sparkles, Target, X } from "lucide-react";
+import {
+  ArrowRight,
+  BookOpen,
+  Briefcase,
+  Lightbulb,
+  Loader,
+  Sparkles,
+  Target,
+  TrendingUp,
+  X,
+} from "lucide-react";
 import { useServerInsertedHTML } from "next/navigation";
 import React, { useState } from "react";
 import axios from "axios";
@@ -138,7 +148,7 @@ const CareerGuide = () => {
                     </div>
                   )}
                   <Button
-                    onCanPlay={getCareerGuidance}
+                    onClick={getCareerGuidance}
                     disabled={loading || skills.length === 0}
                     className="w-full h-11 gap-2"
                   >
@@ -164,6 +174,122 @@ const CareerGuide = () => {
                     Your Personalized Career Guide
                   </DialogTitle>
                 </DialogHeader>
+                {/* summary*/}
+                <div className="space-y-6 py-4">
+                  <div className="p-4 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-b-blue-200 dark:border-b-blue-800">
+                    <div className="flex items-start gap-3">
+                      <Lightbulb
+                        className="text-blue-600 mt-1 shrink-0"
+                        size={20}
+                      />
+                      <div>
+                        <h3 className="font-semibold mb-2">Career Summary</h3>
+                        <p className="text-sm leading-relaxed opacity-90">
+                          {response.summary}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                  <div>
+                    {/*job options*/}
+                    <h3 className="text-lg font-semibold mb-3 flext-items-center gap-2">
+                      <Briefcase size={20} className="text-blue-600" />
+                      Recommended Career Paths
+                    </h3>
+                    <div className="space-y-3">
+                      {response.jobOptions.map((job, index) => (
+                        <div
+                          className="p-4 rounded-lg border hover:border-blue-500 transition-colors"
+                          key={index}
+                        >
+                          <h4 className="font-semibold text-base mb-2">
+                            {job.title}
+                          </h4>
+                          <div className="space-y-2 text-sm">
+                            <div>
+                              <span className="font-medium opacity-70">
+                                Responsibilities:
+                              </span>
+                              <span className="opacity-80">
+                                {job.responsibilities}
+                              </span>
+                            </div>
+                            <span className="font-medium opacity-70">
+                              Why This Role:
+                            </span>
+                            <span className="opacity-80">{job.why}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  {/*Skills to learn*/}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3 flext items-center gap-2">
+                      <TrendingUp size={20} className="text-blue-600" />
+                      Skills to Enhance Your Career
+                    </h3>
+                    <div className="space-y-4">
+                      {response.skillsToLearn.map((category, index) => (
+                        <div className="space-y-2" key={index}>
+                          <h4 className="font-semibold text-sm text-blue-600">
+                            {category.category}
+                          </h4>
+                          <div className="space-y-2">
+                            {category.skills.map((skill, sindex) => (
+                              <div
+                                key={sindex}
+                                className="p-3 rounded-lg bg-secondary border text-sm"
+                              >
+                                <p className="font-medium mb-1">
+                                  {skill.title}
+                                </p>
+                                <p className="text-xs opacity-70 mb-1">
+                                  <span className="font-medium">Why:</span>
+                                  {skill.why}
+                                </p>
+                                <p className="text-xs opacity-70 mb-1">
+                                  <span className="font-medium">How:</span>
+                                  {skill.how}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  {/*Learning approach*/}
+                  <div className="p-4 rounded-lg border bg-blue-950/20 dark:bg-red-950/20">
+                    <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                      <BookOpen size={20} className="text-blue-600" />
+                      {response?.learningApproach?.title}
+                    </h3>
+                    <ul className="space-y-2">
+                      {response?.learningApproach?.points?.map(
+                        (point, index) => (
+                          <li
+                            key={index}
+                            className="text-sm flex items-start gap-2"
+                          >
+                            <span className="text-blue-600 mt-0.5">•</span>
+                            <span
+                              className="opacity-90"
+                              dangerouslySetInnerHTML={{ __html: point }}
+                            />
+                          </li>
+                        ),
+                      )}
+                    </ul>
+                  </div>
+                  <Button
+                    onClick={resetDialog}
+                    variant={"outline"}
+                    className="w-full"
+                  >
+                    Start new Analysis
+                  </Button>
+                </div>
               </>
             )}
           </DialogContent>
