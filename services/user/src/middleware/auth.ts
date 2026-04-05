@@ -11,7 +11,7 @@ interface user {
   bio: string | null;
   resume: string | null;
   resume_public_id: string | null;
-  //   profile_pic: string | null;
+  profile_pic: string | null;
   profile_pic_public_id: string | null;
   skills: string[];
   subscription: string | null;

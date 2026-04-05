@@ -21,7 +21,9 @@ import {
   Zap,
 } from "lucide-react";
 import axios from "axios";
-import { ResumeAnalysisResponse, utils_service } from "@/type";
+import { ResumeAnalysisResponse } from "@/type";
+import { utils_service } from "@/context/AppContext";
+import toast from "react-hot-toast";
 
 // import toast from "react-hot-toast";
 const ResumeAnalyzer = () => {
@@ -35,12 +37,12 @@ const ResumeAnalyzer = () => {
     if (selectedFile) {
       if (selectedFile.type !== "application/pdf") {
         // toast.error("Please upload a PDF file");
-        alert("Please upload a PDF file");
+        toast.error("Please upload a PDF file");
         return;
       }
       if (selectedFile.size > 5 * 1024 * 1024) {
-        // toast.error("File size should be less than 5MB");
-        alert("File size should be less than 5MB");
+        // toast.error("File size should be less t                                           han 5MB");
+        toast.error("File size should be less than 5MB");
         return;
       }
       setFile(selectedFile);
@@ -57,7 +59,7 @@ const ResumeAnalyzer = () => {
   const analyzeResume = async () => {
     if (!file) {
       // toast.error("Please upload a resume");
-      alert("Please upload a resume");
+      toast.error("Please upload a resume");
       return;
     }
     setLoading(true);
@@ -69,12 +71,13 @@ const ResumeAnalyzer = () => {
           pdfBase64: base64,
         },
       );
+      console.log("DEBUG - AI Response:", data);
       setResponse(data);
       // toast.success("Resume analyzed successfully!");
-      alert("Resume analyzed successfully!");
+      toast.success("Resume analyzed successfully!");
     } catch (error: any) {
       // toast.error(error.response?.data?.message || "Failed to analyze resume");
-      alert(error.response?.data?.message || "Failed to analyze resume");
+      toast.error(error.response?.data?.message || "Failed to analyze resume");
       console.log(error);
     } finally {
       setLoading(false);
@@ -247,7 +250,7 @@ border-blue-200 dark:border-blue-800"
                     </h3>
 
                     <div className="grid md:grid-cols-2 gap-3">
-                      {Object.entries(response.scoreBreakdown).map(
+                      {Object.entries(response.scoreBreakdown || {}).map(
                         ([key, value]) => (
                           <div key={key} className="p-4 rounded-lg border">
                             <div className="flex items-center justify-between mb-2">
@@ -278,7 +281,7 @@ border-green-200 dark:border-green-800"
                       What Your Resume Does Well
                     </h3>
                     <ul className="space-y-2">
-                      {response.strength.map((strength, index) => (
+                      {(response.strengths || []).map((strength, index) => (
                         <li
                           key={index}
                           className="text-sm flex items-start gap-2"
@@ -296,7 +299,7 @@ border-green-200 dark:border-green-800"
                       Recommendations for Improvement
                     </h3>
                     <div className="space-y-3">
-                      {response.suggestions.map((suggestion, index) => (
+                      {(response.suggestions || []).map((suggestion, index) => (
                         <div key={index} className="p-4 rounded-lg border">
                           <div className="flex items-start justify-between gap-3 mb-2">
                             <h4 className="font-semibold text-sm">
