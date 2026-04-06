@@ -92,6 +92,8 @@ export const loginUser = tryCatch(async (req, res, next) => {
       u.bio,
       u.resume,
       u.subscription,
+      u.profile_pic,
+      u.profile_pic_public_id,
       ARRAY_AGG(s.name) FILTER (WHERE s.name IS NOT NULL) AS skills
     FROM users u
     LEFT JOIN user_skills us ON u.user_id = us.user_id
