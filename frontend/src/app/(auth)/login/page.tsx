@@ -10,15 +10,18 @@ import { Mail, Lock, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
+import Loading from "@/components/loading";
 const LoginPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [btnLoading, setBtnLoading] = useState(false);
   const { isAuth, setUser, loading, setIsAuth } = useAppData();
+  if (loading) return <Loading />;
   if (isAuth) return redirect("/");
   const submitHandler = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setBtnLoading(true);
+
     try {
       const { data } = await axios.post(`${auth_service}/api/auth/login`, {
         email,

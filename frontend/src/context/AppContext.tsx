@@ -21,8 +21,12 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [isAuth, setIsAuth] = useState(false);
   const [loading, setLoading] = useState(true);
   const [btnLoading, setBtnLoading] = useState(false);
-  const token = Cookies.get("token");
   async function fetchUser() {
+    const token = Cookies.get("token");
+    if (!token) {
+      setLoading(false);
+      return;
+    }
     try {
       const { data } = await axios.get(`${user_service}/api/user/me`, {
         headers: {

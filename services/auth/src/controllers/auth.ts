@@ -108,7 +108,9 @@ export const loginUser = tryCatch(async (req, res, next) => {
       u.role,
       u.bio,
       u.resume,
-      u.subscription
+      u.subscription,
+        u.profile_pic,
+      u.profile_pic_public_id
   `;
 
   if (user.length === 0) {

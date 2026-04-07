@@ -1,10 +1,15 @@
+"use client";
 import CareerGuide from "@/components/career-guide";
 import Hero from "@/components/hero";
+import Loading from "@/components/loading";
 import ResumeAnalyzer from "@/components/resume-analyser";
 import { Button } from "@/components/ui/button";
+import { useAppData } from "@/context/AppContext";
 import React from "react";
 
 const Home = () => {
+  const { loading } = useAppData();
+  if (loading) return <Loading />;
   return (
     <div>
       <Hero />
