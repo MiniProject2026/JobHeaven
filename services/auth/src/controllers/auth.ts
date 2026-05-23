@@ -48,7 +48,7 @@ export const registerUser = tryCatch(async (req, res, next) => {
     }
 
     const { data } = await axios.post(
-      `${process.env.UPLOAD_SERVICES}/api/utils/upload`,
+      `${process.env.UPLOAD_SERVICE}/api/utils/upload`,
       { buffer: filebuffer.content },
     );
 
