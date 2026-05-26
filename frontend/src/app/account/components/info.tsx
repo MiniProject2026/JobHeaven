@@ -1,18 +1,59 @@
 import { AccountProps } from "@/type";
-import React, { useRef, useState } from "react";
+import React, { ChangeEvent, useRef, useState } from "react";
 import { Card } from "@/components/ui/card";
-import { Briefcase, FileText,Mail,Phone,NotepadText } from "lucide-react";
+import { Briefcase, FileText,Mail,Phone,NotepadText, Camera, Edit, UserIcon } from "lucide-react";
 import Link from "next/link"
+import { Button } from "@/components/ui/button";
+import { useAppData } from "@/context/AppContext";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+
 const Info:React.FC<AccountProps>=({user,isYourAccount})=>{
-    const [btnLoading,setBtnLoading]=useState(false);
+ 
     const inputRef=useRef<HTMLInputElement|null>(null);
-    const editRef=useRef<HTMLInputElement|null>(null);
+    const editRef=useRef<HTMLButtonElement|null>(null);
     const resumeRef=useRef<HTMLInputElement|null>(null);
     const [name,setName]=useState("");
     const [phoneNumber,setPhoneNumber]=useState("");
     const [bio,setBio]=useState("");
+    const {updateProfilePic,updateResume,btnLoading,updateUser}=useAppData();
     const handleClick=()=>{
         inputRef.current?.click();
+    };
+    const changeHandler=(e:ChangeEvent<HTMLInputElement>)=>{
+        const file=e.target.files?.[0];
+        if(file)
+        {
+            const formData=new FormData();
+            formData.append("file",file);
+            updateProfilePic(formData);
+        }
+    };
+     const handleEditClick=()=>{
+        editRef.current?.click();
+        setName(user.name);
+        setPhoneNumber(user.phone_number);
+        setBio(user.bio||"");
+    };
+    const updateProfileHandler=()=>{
+        updateUser(name,phoneNumber,bio);
+    };
+    const handleResumeClick=()=>{
+        resumeRef.current?.click();
+    }
+    const changeResume=(e:ChangeEvent<HTMLInputElement>)=>{
+        const file=e.target.files?.[0];
+        if(file){
+           if(file.type!=="application/pdf"){
+            alert("please upload  pdf file");
+            return;
+           }
+           const formData=new FormData();
+           formData.append("file",file);
+           updateResume(formData);
+        }
     };
     return (
         <div className='max-w-5xl mx-auto px-4 py-8'>
@@ -24,6 +65,14 @@ const Info:React.FC<AccountProps>=({user,isYourAccount})=>{
                                 <img src={user.profile_pic? user.profile_pic: "/user.png"} alt="" className="w-full h-full object-cover"/>
                             </div>
                             {/*edit option for your account*/}
+                            {
+                                isYourAccount && 
+                                <>
+                                <Button variant={"secondary"} size={"icon"} onClick={handleClick}
+                                className="absolute bottom-0 right-0m rounded-full; h-10 w-10 shadow-lg"><Camera size={18}/></Button>
+                                <input type="file" className="hidden" accept="image/" ref={inputRef} onChange={changeHandler}/></>
+                                
+                            }
                         </div>
                     </div>
                 </div>
@@ -35,6 +84,8 @@ const Info:React.FC<AccountProps>=({user,isYourAccount})=>{
                                 <h1 className="text-3xl font-bold">
                                     {user.name}
                                 </h1>
+                                {/*edit button*/}
+                               {isYourAccount && <Button variant={"ghost"} size={"icon"} className="h-8 w-8" onCanPlay={handleEditClick}><Edit size={16}/></Button>}
                             </div>
                             <div className="flex items-center gap-2 text-sm opacity-70">
                                 <Briefcase size={16}/>
@@ -96,11 +147,45 @@ const Info:React.FC<AccountProps>=({user,isYourAccount})=>{
                                     View Resume PDF
                                     </Link>
                                 </div>
+                                {/*edit button*/}
+                                <Button variant={"outline"} size={"sm"} onClick={handleResumeClick} className="gap-2">Update</Button>
+                                <input type="file" ref={resumeRef} className="hidden" accept="applicatio/pdf" onChange={changeResume}/>
                             </div>
                         </div>
                     )}
                 </div>
             </Card>
+            {/*Dialog box for edit*/}
+            <Dialog>
+                <DialogTrigger asChild>
+                    <Button ref={editRef} variant={"outline"} className="hidden">Edit Profile</Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[500px]">
+                    <DialogHeader>
+                        <DialogTitle className="text-2xl ">Edit Profile</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-5 py-4">
+                        <div className="space-y-2">
+                            <Label htmlFor="name" className="text-sm font-medium flex items-center gap-2"><UserIcon size={16}/>Full Name</Label>
+                            <Input id="name" type="text" placeholder="Enter your name" className="h-11" value={name} onChange={(e)=>setName(e.target.value)}/>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="phone" className="text-sm font-medium flex items-center gap-2"><Phone size={16}/>Phone</Label>
+                            <Input id="phone" type="number" placeholder="Enter your phone number" className="h-11" value={phoneNumber} onChange={(e)=>setPhoneNumber(e.target.value)}/>
+                        </div>
+                        {
+                            user.role==="jobseeker" && <div className="space-y-2">
+                            <Label htmlFor="bio" className="text-sm font-medium flex items-center gap-2"><FileText size={16}/>Bio</Label>
+                            <Input id="bio" type="text" placeholder="Enter your bio" className="h-11" value={bio} onChange={(e)=>setBio(e.target.value)}/>
+                        </div>
+                        }
+                        <DialogFooter>
+                            <Button disabled={btnLoading} onClick={updateProfileHandler} className="w-full h-11" type="submit">{btnLoading ? "Saving changes...":"Save changes"}</Button>
+                        </DialogFooter>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     )
 }
