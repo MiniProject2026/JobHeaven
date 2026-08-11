@@ -170,7 +170,7 @@ export const resetPassword = TryCatch(async (req, res, next) => {
   let decoded: any;
 
   try {
-    decoded = jwt.verify(token, process.env.JWT_SEC as string);
+    decoded = jwt.verify(token as string, process.env.JWT_SEC as string);
   } catch (error) {
     throw new ErrorHandler(400, "Expired token");
   }
