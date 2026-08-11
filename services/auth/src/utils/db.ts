@@ -3,4 +3,6 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-export const sql = neon(process.env.DB_URL as string);
+export const sql = neon(
+  (process.env.DB_URL || process.env.POSTGRES_URL) as string
+);
