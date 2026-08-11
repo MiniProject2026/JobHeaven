@@ -6,9 +6,22 @@ dotenv.config();
 
 export const startSendMailConsumer = async () => {
   try {
+    const broker = process.env.Kafka_Broker || "localhost:9092";
+    const isLocal = broker.includes("localhost") || broker.includes("127.0.0.1");
+
     const kafka = new Kafka({
       clientId: "mail-service",
-      brokers: [process.env.Kafka_Broker || "localhost:9092"],
+      brokers: [broker],
+      ssl: !isLocal,
+      ...(process.env.KAFKA_USER && process.env.KAFKA_PASS
+        ? {
+            sasl: {
+              mechanism: "plain",
+              username: process.env.KAFKA_USER,
+              password: process.env.KAFKA_PASS,
+            },
+          }
+        : {}),
     });
 
     const consumer = kafka.consumer({ groupId: "mail-service-group" });

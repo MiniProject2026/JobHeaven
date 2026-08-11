@@ -7,30 +7,47 @@ let admin: Admin;
 
 export const connectKafka = async () => {
   try {
+    const broker = process.env.Kafka_Broker || "localhost:9092";
+    const isLocal = broker.includes("localhost") || broker.includes("127.0.0.1");
+
     const kafka = new Kafka({
       clientId: "auth-service",
-      brokers: [process.env.Kafka_Broker || "localhost:9092"],
+      brokers: [broker],
+      ssl: !isLocal,
+      ...(process.env.KAFKA_USER && process.env.KAFKA_PASS
+        ? {
+            sasl: {
+              mechanism: "plain",
+              username: process.env.KAFKA_USER,
+              password: process.env.KAFKA_PASS,
+            },
+          }
+        : {}),
     });
 
-    admin = kafka.admin();
-    await admin.connect();
+    try {
+      admin = kafka.admin();
+      await admin.connect();
 
-    const topics = await admin.listTopics();
+      const topics = await admin.listTopics();
 
-    if (!topics.includes("send-mail")) {
-      await admin.createTopics({
-        topics: [
-          {
-            topic: "send-mail",
-            numPartitions: 1,
-            replicationFactor: 1,
-          },
-        ],
-      });
-      console.log("✅ Topic 'send-mail' created");
+      if (!topics.includes("send-mail")) {
+        await admin.createTopics({
+          topics: [
+            {
+              topic: "send-mail",
+              numPartitions: 1,
+              replicationFactor: 1,
+            },
+          ],
+        });
+        console.log("✅ Topic 'send-mail' created");
+      }
+
+      await admin.disconnect();
+    } catch (adminErr) {
+      console.log("Kafka admin notice:", adminErr);
     }
-
-    await admin.disconnect();
 
     producer = kafka.producer();
 
