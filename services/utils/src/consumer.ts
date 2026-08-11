@@ -12,7 +12,7 @@ export const startSendMailConsumer = async () => {
     const kafka = new Kafka({
       clientId: "mail-service",
       brokers: [broker],
-      ssl: !isLocal,
+      ssl: isLocal ? false : { rejectUnauthorized: false },
       ...(process.env.KAFKA_USER && process.env.KAFKA_PASS
         ? {
             sasl: {
